@@ -12,6 +12,7 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Illuminate\Support\Facades\Auth;
 
 class ScheduleResource extends Resource
 {
@@ -38,6 +39,7 @@ class ScheduleResource extends Resource
                         ->relationship('office', 'name')
                         ->required(),
                     Forms\Components\Toggle::make('is_wfa')
+                        ->label("WFA")
                         ->required(),
                 ])
             ]);
@@ -46,18 +48,26 @@ class ScheduleResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(function (Builder $query) {
+                $is_super_admin = Auth::user()->hasRole('super admin');
+
+                if (!$is_super_admin) {
+                    $query->where('user_id', Auth::user()->id);
+                }
+            })
             ->columns([
                 Tables\Columns\TextColumn::make('user.name')
                     ->numeric()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('shift.name')
-                    ->numeric()
+                    ->description(fn (Schedule $record) => $record->shift->start_time . ' - ' . $record->shift->end_time)
                     ->sortable(),
                 Tables\Columns\TextColumn::make('office.name')
                     ->numeric()
                     ->sortable(),
                 Tables\Columns\IconColumn::make('is_wfa')
-                    ->boolean(),
+                    ->boolean()
+                    ->label("WFA"),
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
